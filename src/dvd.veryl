@@ -86,9 +86,8 @@ module dvd #(
         }
     }
 
-    assign dvd = (sx >= px) && (sx <: px + WIDTH) && (sy >= py) && (sy <: py + HEIGHT);
-
-    always_comb {
+    always_ff {
+        dvd = (sx >= px) && (sx <: px + WIDTH) && (sy >= py) && (sy <: py + HEIGHT);
         rom_x = (sx[11:0] - px[11:0]);
         rom_y = (sy[11:0] - py[11:0]);
     }

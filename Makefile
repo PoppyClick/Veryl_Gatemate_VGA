@@ -41,7 +41,7 @@ gen_sv:
 
 synth:
 	@test -d $(SNT) || mkdir $(SNT)
-	$(yosys) -v 0 -l $(SNT)/synth.log -m slang -p 'read_slang -v $(CC_SIM) -v $(CC_BB) $(verilog_src); synth_gatemate -top $(PRJ)_$(TOP) $(yosys_flg); write_json $(SNT)/synth.json; write_verilog $(SNT)/netlist.v'
+	$(yosys) -v 0 -l $(SNT)/synth.log -p 'read_slang -v $(CC_SIM) -v $(CC_BB) $(verilog_src); synth_gatemate -top $(PRJ)_$(TOP) $(yosys_flg); write_json $(SNT)/synth.json; write_verilog $(SNT)/netlist.v'
 
 impl:
 	@test -d $(IMP) || mkdir $(IMP)
