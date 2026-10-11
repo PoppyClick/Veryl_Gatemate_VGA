@@ -96,7 +96,7 @@ module dvd #(
     inst sprite: dvd_rom (
         clk                ,
         en  : dvd          ,
-        addr: rom_x * rom_y,
+        addr: rom_x + WIDTH * rom_y,
         data: rom_val      ,
     );
 
