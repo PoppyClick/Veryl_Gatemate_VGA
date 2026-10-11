@@ -124,7 +124,7 @@ module top #(
 
     inst pll: $sv::CC_PLL #(
         REF_CLK: 10     ,
-        OUT_CLK: "40"   ,
+        OUT_CLK: "21.175"   ,
         PERF_MD: "SPEED",
     ) (
         CLK_REF            : CLK0               ,
