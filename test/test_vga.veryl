@@ -1,0 +1,132 @@
+// vga.veryl test
+
+module test_vga_tb (
+    clk       : input  clock,
+    rst       : input  reset,
+    vsync_pass: output logic,
+    hsync_pass: output logic,
+    de_pass   : output logic,
+) {
+
+    const COLOR_DEPTH   : u32   = 4;
+    const H_PIXELS      : u32   = 1920;
+    const V_PIXELS      : u32   = 1080;
+    const H_PULSE       : u32   = 44;
+    const V_PULSE       : u32   = 5;
+    const H_F_PORCH     : u32   = 88;
+    const H_B_PORCH     : u32   = 148;
+    const V_F_PORCH     : u32   = 4;
+    const V_B_PORCH     : u32   = 36;
+    const H_TOTAL_PIXELS: u32   = H_PIXELS + H_PULSE + H_F_PORCH + H_B_PORCH;
+    const V_TOTAL_PIXELS: u32   = V_PIXELS + V_PULSE + V_F_PORCH + V_B_PORCH;
+    const H_POL         : bbool = false;
+    const V_POL         : bbool = false;
+
+    var tb_sx   : u16  ;
+    var tb_sy   : u16  ;
+    var tb_hsync: logic;
+    var tb_vsync: logic;
+    var tb_de   : logic;
+
+    inst dut: vga #(
+        H_PIXELS : H_PIXELS ,
+        V_PIXELS : V_PIXELS ,
+        H_PULSE  : H_PULSE  ,
+        V_PULSE  : V_PULSE  ,
+        H_F_PORCH: H_F_PORCH,
+        H_B_PORCH: H_B_PORCH,
+        V_F_PORCH: V_F_PORCH,
+        V_B_PORCH: V_B_PORCH,
+    ) (
+        pxl_clk: clk     ,
+        pxl_rst: rst     ,
+        sx     : tb_sx   ,
+        sy     : tb_sy   ,
+        de     : tb_de   ,
+        hsync  : tb_hsync,
+        vsync  : tb_vsync,
+    );
+
+    // Test variables
+    var x_counter: u16;
+    var y_counter: u16;
+
+    // Test counters incrementation
+    always_ff {
+        if_reset {
+            x_counter = 0;
+            y_counter = 0;
+        } else {
+            if x_counter == H_TOTAL_PIXELS - 1 {
+                x_counter = 0;
+                if y_counter == V_TOTAL_PIXELS - 1 {
+                    y_counter = 0;
+                } else {
+                    y_counter += 1;
+                }
+            } else {
+                x_counter += 1;
+            }
+        }
+    }
+
+
+    // Check H_Sync
+    assign hsync_pass = case x_counter {
+        0..H_PIXELS + H_F_PORCH                             : tb_hsync,
+        H_PIXELS + H_F_PORCH..H_PIXELS + H_F_PORCH + H_PULSE: ~tb_hsync,
+        H_PIXELS + H_F_PORCH + H_PULSE..H_TOTAL_PIXELS      : tb_hsync,
+        default                                             : 0,
+    };
+
+    // Check V_Sync
+    assign vsync_pass = case y_counter {
+        0..V_PIXELS + V_F_PORCH                             : tb_vsync,
+        V_PIXELS + V_F_PORCH..V_PIXELS + V_F_PORCH + V_PULSE: ~tb_vsync,
+        V_PIXELS + V_F_PORCH + V_PULSE..V_TOTAL_PIXELS      : tb_vsync,
+        default                                             : 0,
+    };
+
+    // Check de
+    always_comb {
+        // de
+        if x_counter <: H_PIXELS & y_counter <: V_PIXELS {
+            de_pass = tb_de;
+        } else {
+            // Inde
+            de_pass = ~tb_de;
+        }
+    }
+}
+
+#[test(test_vga)]
+module test_vga {
+    inst clk: $tb::clock_gen;
+    inst rst: $tb::reset_gen ( clk );
+
+    var vsync_pass: logic;
+    var hsync_pass: logic;
+    var de_pass   : logic;
+
+    inst harness: test_vga_tb (
+        clk       : clk       ,
+        rst       : rst       ,
+        vsync_pass: vsync_pass,
+        hsync_pass: hsync_pass,
+        de_pass   : de_pass   ,
+    );
+
+    initial {
+        rst.assert(clk);
+
+        for _i in 0..500000 {
+            clk.next(1);
+
+            $assert(hsync_pass, "Error on hsync. X: %d, hsync: %b", harness.tb_sx, harness.tb_hsync);
+            $assert(vsync_pass, "Error on vsync. Y: %d, hsync: %b", harness.tb_sy, harness.tb_vsync);
+            $assert(de_pass, "Error on de value. X: %d, Y: %d, de: %b", harness.tb_sx, harness.tb_sy, harness.tb_de);
+        }
+
+        $finish();
+    }
+}

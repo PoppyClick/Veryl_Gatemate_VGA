@@ -1,0 +1,90 @@
+module square_mv #(
+    param COLOR_DEPTH: u32 = 4  ,
+    param H_PIXELS   : u32 = 640,
+    param V_PIXELS   : u32 = 480,
+) (
+    clk: input  clock             ,
+    rst: input  reset             ,
+    sx : input  u16               ,
+    sy : input  u16               ,
+    de : input  logic             ,
+    r  : output logic<COLOR_DEPTH>,
+    g  : output logic<COLOR_DEPTH>,
+    b  : output logic<COLOR_DEPTH>,
+) {
+
+    const SIZE : u16 = 64;
+    const SPEED: u16 = 1; // Pixel per frame
+
+    var frame : logic; // High once per frame
+    var square: logic; // True when coordinate is part of square
+
+    var px: u32  ; // X position
+    var py: u32  ; // Y position
+    var vx: logic; // X velocity
+    var vy: logic; // Y velocity
+
+    assign frame = if (sy == V_PIXELS && sx == 0) ? 1 : 0;
+
+    always_ff {
+        if_reset {
+            px = 0;
+            py = 0;
+            vx = 1;
+            vy = 1;
+        } else {
+            // Move the square once per frame
+            if frame {
+                // Moving to the right
+                if vx {
+                    // Checking limits
+                    if (SIZE + px + SPEED >= H_PIXELS - 1) {
+                        px = H_PIXELS - SIZE - 1;
+                        vx = 0; // Go left
+                    } else {
+                        px += SPEED;
+                    }
+                }
+                // Moving to the left
+                 else {
+                    // Checking limits
+                    if (px <= SPEED) {
+                        px = 0;
+                        vx = 1; // Go right
+                    } else {
+                        px -= SPEED;
+                    }
+                }
+                // Moving down
+                if vy {
+                    // Checking limits
+                    if (SIZE + py + SPEED >= V_PIXELS - 1) {
+                        py = V_PIXELS - SIZE - 1;
+                        vy = 0; // Go up
+                    } else {
+                        py += SPEED;
+                    }
+                }
+                // Moving up
+                 else {
+                    // Checking limits
+                    if (py <= SPEED) {
+                        py = 0;
+                        vy = 1; // Go Down
+                    } else {
+                        py -= SPEED;
+                    }
+                }
+            }
+        }
+    }
+
+    assign square = (sx >= px) && (sx <: px + SIZE) && (sy >= py) && (sy <: py + SIZE);
+
+    always_comb {
+        r = if square && de ? 4'hF : 0;
+        g = if square && de ? 4'hF : 0;
+        b = if square && de ? 4'hF : 4'hF;
+    }
+
+}

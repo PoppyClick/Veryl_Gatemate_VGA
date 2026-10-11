@@ -1,0 +1,52 @@
+/// VGA Signal generator
+///
+/// This modules generates HSync/VSync signals to drive a VGA display.
+
+pub module vga #(
+    param COLOR_DEPTH: u16   = 4    , /// Number of bits per color
+    param H_PIXELS   : u16   = 640  , /// Active number of horizontal pixels in a frame
+    param V_PIXELS   : u16   = 480  , /// Active number of vertical pixels in a frame
+    param H_PULSE    : u16   = 96   , /// Pulse pixel length on HSync
+    param V_PULSE    : u16   = 2    , /// Pulse line length on VSync
+    param H_F_PORCH  : u16   = 16   , /// Horizontal front porch pixel length
+    param H_B_PORCH  : u16   = 48   , /// Horizontal back porch pixel length
+    param V_F_PORCH  : u16   = 10   , /// Vertical front porch line length
+    param V_B_PORCH  : u16   = 33   , /// Vertical back porch line length
+    param H_POL      : bbool = false, /// Polarity of sync signal
+    param V_POL      : bbool = false, /// Polarity of sync signal
+) (
+    pxl_clk: input clock, /// Pixel clock
+    pxl_rst: input reset, /// Reset, associated with pxl_clk clock domain
+
+    sx: output u16  , /// Pixel x coordinate.
+    sy: output u16  , /// Pixel y coordinate.
+    de: output logic, /// Pixel will be displayed to the screen.
+
+    hsync: output logic, /// Output HSync signal
+    vsync: output logic, /// Output VSync signal
+) {
+
+    // Constants
+    const H_TOTAL_PIXELS: u16 = H_PIXELS + H_PULSE + H_F_PORCH + H_B_PORCH;
+    const V_TOTAL_PIXELS: u16 = V_PIXELS + V_PULSE + V_F_PORCH + V_B_PORCH;
+
+    // Active and sync signals
+    always_comb {
+        hsync = if sx >= H_PIXELS + H_F_PORCH && sx <: H_PIXELS + H_F_PORCH + H_PULSE ? H_POL : !H_POL;
+        vsync = if sy >= V_PIXELS + V_F_PORCH && sy <: V_PIXELS + V_F_PORCH + V_PULSE ? V_POL : !V_POL;
+        de    = sx <: H_PIXELS && sy <: V_PIXELS;
+    }
+
+    // Pixel counters
+    always_ff {
+        if_reset {
+            sx = 0;
+            sy = 0;
+        } else {
+            sx = if sx <: H_TOTAL_PIXELS - 1 ? sx + 1 : 0;
+            if sx == H_TOTAL_PIXELS - 1 {
+                sy = if sy <: V_TOTAL_PIXELS - 1 ? sy + 1 : 0;
+            }
+        }
+    }
+}

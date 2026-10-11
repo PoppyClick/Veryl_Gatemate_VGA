@@ -1,0 +1,11 @@
+.build
+.vscode
+
+dependencies
+implementation
+simulation/obj_dir
+synthesis
+target
+
+*.mem
+*.f

@@ -1,0 +1,25 @@
+module square #(
+    param COLOR_DEPTH: u32 = 4  ,
+    param H_PIXELS   : u32 = 640,
+    param V_PIXELS   : u32 = 480,
+) (
+    sx: input  u16               ,
+    sy: input  u16               ,
+    de: input  logic             ,
+    r : output logic<COLOR_DEPTH>,
+    g : output logic<COLOR_DEPTH>,
+    b : output logic<COLOR_DEPTH>,
+) {
+
+    var square: logic;
+
+    always_comb {
+        square = (sx >: H_PIXELS / 3 && sx <: 2 * H_PIXELS / 3) && (sy >: V_PIXELS / 3 && sy <: 2 * V_PIXELS / 3);
+    }
+
+    always_comb {
+        r = if de && square ? 4'hF : 4'h1;
+        g = if de && square ? 4'hF : 4'h3;
+        b = if de && square ? 4'hF : 4'h7;
+    }
+}

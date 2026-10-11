@@ -1,0 +1,21 @@
+module dvd_rom (
+    clk : input  clock    ,
+    en  : input  logic    ,
+    addr: input  logic<12>,
+    data: output logic<4> ,
+) {
+    #[allow(initial_assign)]
+    var mem: logic<4> [4095];
+
+    always_ff {
+        if en {
+            data = mem[addr];
+        } else {
+            data = 0;
+        }
+    }
+
+    initial {
+        $readmemb("dvd.mem", mem);
+    }
+}

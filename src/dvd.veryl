@@ -1,0 +1,108 @@
+module dvd #(
+    param COLOR_DEPTH: u32 = 4  ,
+    param H_PIXELS   : u16 = 640,
+    param V_PIXELS   : u16 = 480,
+) (
+    clk: input  clock             ,
+    rst: input  reset             ,
+    sx : input  u16               ,
+    sy : input  u16               ,
+    de : input  logic             ,
+    r  : output logic<COLOR_DEPTH>,
+    g  : output logic<COLOR_DEPTH>,
+    b  : output logic<COLOR_DEPTH>,
+) {
+
+    const WIDTH : u8 = 93; // Sprite pixel width
+    const HEIGHT: u8 = 42; // Sprite pixel height
+
+    const SPEED: u16 = 1; // Pixel per frame
+
+    var frame: logic; // High once per frame
+    var dvd  : logic; // True when coordinate is part of dvd
+
+    var px: u16  ; // X position
+    var py: u16  ; // Y position
+    var vx: logic; // X velocity
+    var vy: logic; // Y velocity
+
+    // Rom dimensions
+    var rom_x  : logic<12>     ;
+    var rom_y  : logic<12>     ;
+    var rom_val: logic<4>;
+
+    assign frame = if (sy == V_PIXELS && sx == 0) ? 1 : 0;
+
+    always_ff {
+        if_reset {
+            px = 0;
+            py = 0;
+            vx = 1;
+            vy = 1;
+        } else {
+            // Move the dvd once per frame
+            if frame {
+                // Moving to the right
+                if vx {
+                    // Checking limits
+                    if (WIDTH + px + SPEED >= H_PIXELS - 1) {
+                        px = H_PIXELS - WIDTH - 1;
+                        vx = 0; // Go left
+                    } else {
+                        px += SPEED;
+                    }
+                }
+                // Moving to the left
+                 else {
+                    // Checking limits
+                    if (px <= SPEED) {
+                        px = 0;
+                        vx = 1; // Go right
+                    } else {
+                        px -= SPEED;
+                    }
+                }
+                // Moving down
+                if vy {
+                    // Checking limits
+                    if (HEIGHT + py + SPEED >= V_PIXELS - 1) {
+                        py = V_PIXELS - HEIGHT - 1;
+                        vy = 0; // Go up
+                    } else {
+                        py += SPEED;
+                    }
+                }
+                // Moving up
+                 else {
+                    // Checking limits
+                    if (py <= SPEED) {
+                        py = 0;
+                        vy = 1; // Go Down
+                    } else {
+                        py -= SPEED;
+                    }
+                }
+            }
+        }
+    }
+
+    assign dvd = (sx >= px) && (sx <: px + WIDTH) && (sy >= py) && (sy <: py + HEIGHT);
+
+    always_comb {
+        rom_x = (sx[11:0] - px[11:0]);
+        rom_y = (sy[11:0] - py[11:0]);
+    }
+
+    inst sprite: dvd_rom (
+        clk                ,
+        en  : dvd          ,
+        addr: rom_x * rom_y,
+        data: rom_val      ,
+    );
+
+    always_comb {
+        r = rom_val;
+        g = rom_val;
+        b = rom_val;
+    }
+}

@@ -1,0 +1,147 @@
+module top #(
+    param PATTERN: string = "DVD", // One of, FRANCE, SQUARE, SQUARE_MV, DVD
+) (
+    CLK0     : input  clock   ,
+    VGA_Red  : output logic<4>,
+    VGA_Green: output logic<4>,
+    VGA_Blue : output logic<4>,
+    VGA_HSync: output logic   ,
+    VGA_VSync: output logic   ,
+) {
+
+    var clk: '_ clock          ;
+    var rst:    reset_async_low;
+
+    const COLOR_DEPTH   : u16   = 4;
+    const H_PIXELS      : u16   = 640;
+    const V_PIXELS      : u16   = 480;
+    const H_PULSE       : u16   = 96;
+    const V_PULSE       : u16   = 2;
+    const H_F_PORCH     : u16   = 16;
+    const H_B_PORCH     : u16   = 48;
+    const V_F_PORCH     : u16   = 10;
+    const V_B_PORCH     : u16   = 33;
+    const H_TOTAL_PIXELS: u16   = H_PIXELS + H_PULSE + H_F_PORCH + H_B_PORCH;
+    const V_TOTAL_PIXELS: u16   = V_PIXELS + V_PULSE + V_F_PORCH + V_B_PORCH;
+    const H_POL         : bbool = true;
+    const V_POL         : bbool = true;
+
+    var sx: u16  ;
+    var sy: u16  ;
+    var de: logic;
+
+    // Unused
+    var usr_pll_locked_stdy: logic;
+    var usr_pll_locked     : logic;
+    var clk90              : logic;
+    var clk180             : logic;
+    var clk270             : logic;
+    var clk_ref_out        : logic;
+
+    if PATTERN == "SQUARE" :pattern {
+        // Square (fixed)
+        inst painter: square #(
+            COLOR_DEPTH: COLOR_DEPTH,
+            H_PIXELS   : H_PIXELS   ,
+            V_PIXELS   : V_PIXELS   ,
+        ) (
+            sx: sx       ,
+            sy: sy       ,
+            de: de       ,
+            r : VGA_Red  ,
+            g : VGA_Green,
+            b : VGA_Blue ,
+        );
+    } else if PATTERN == "FRANCE" {
+        // France flag
+        inst painter: france #(
+            COLOR_DEPTH: COLOR_DEPTH,
+            H_PIXELS   : H_PIXELS   ,
+            V_PIXELS   : V_PIXELS   ,
+        ) (
+            sx: sx       ,
+            sy: sy       ,
+            de: de       ,
+            r : VGA_Red  ,
+            g : VGA_Green,
+            b : VGA_Blue ,
+        );
+    } else if PATTERN == "SQUARE_MV" {
+        // Square (moving !)
+        inst painter: square_mv #(
+            COLOR_DEPTH: COLOR_DEPTH,
+            H_PIXELS   : H_PIXELS   ,
+            V_PIXELS   : V_PIXELS   ,
+        ) (
+            clk: clk      ,
+            rst: rst      ,
+            sx : sx       ,
+            sy : sy       ,
+            de : de       ,
+            r  : VGA_Red  ,
+            g  : VGA_Green,
+            b  : VGA_Blue ,
+        );
+    } else if PATTERN == "DVD" {
+        // DVD (moving !)
+        inst painter: dvd #(
+            COLOR_DEPTH: COLOR_DEPTH,
+            H_PIXELS   : H_PIXELS   ,
+            V_PIXELS   : V_PIXELS   ,
+        ) (
+            clk: clk      ,
+            rst: rst      ,
+            sx : sx       ,
+            sy : sy       ,
+            de : de       ,
+            r  : VGA_Red  ,
+            g  : VGA_Green,
+            b  : VGA_Blue ,
+        );
+    }
+
+    inst display: vga #(
+        COLOR_DEPTH: COLOR_DEPTH,
+        H_PIXELS   : H_PIXELS   ,
+        V_PIXELS   : V_PIXELS   ,
+        H_PULSE    : H_PULSE    ,
+        V_PULSE    : V_PULSE    ,
+        H_F_PORCH  : H_F_PORCH  ,
+        H_B_PORCH  : H_B_PORCH  ,
+        V_F_PORCH  : V_F_PORCH  ,
+        V_B_PORCH  : V_B_PORCH  ,
+        H_POL      : H_POL      ,
+        V_POL      : V_POL      ,
+    ) (
+        pxl_clk: clk      ,
+        pxl_rst: rst      ,
+        sx     : sx       ,
+        sy     : sy       ,
+        de     : de       ,
+        hsync  : VGA_HSync,
+        vsync  : VGA_VSync,
+    );
+
+    inst pll: $sv::CC_PLL #(
+        REF_CLK: 10     ,
+        OUT_CLK: "40"   ,
+        PERF_MD: "SPEED",
+    ) (
+        CLK_REF            : CLK0               ,
+        USR_CLK_REF        : 0                  ,
+        CLK_FEEDBACK       : 0                  ,
+        USR_LOCKED_STDY_RST: 0                  ,
+        USR_PLL_LOCKED_STDY: usr_pll_locked_stdy,
+        USR_PLL_LOCKED     : usr_pll_locked     ,
+        CLK0               : clk                ,
+        CLK90              : clk90              ,
+        CLK180             : clk180             ,
+        CLK270             : clk270             ,
+        CLK_REF_OUT        : clk_ref_out        ,
+    );
+
+    inst rst_gen: $sv::CC_USR_RSTN (
+        USR_RSTN: rst,
+    );
+
+}
